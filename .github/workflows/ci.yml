@@ -1,0 +1,47 @@
+name: Docker Image CI
+
+on:
+  create:
+  push:
+    branches: [main]
+
+jobs:
+
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - uses: docker/setup-qemu-action@v3
+
+    - uses: ./.github/actions/configure-docker-containerd-image-store
+      with:
+        USE_CONTAINERD: true
+  
+    - name: build amd64 architecture
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        load: true
+        platforms: linux/amd64
+        push: false
+        tags: signal_for_suspend:amd64
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+
+    - name: build arm64 architecture
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        load: true
+        platforms: linux/arm64
+        push: false
+        tags: signal_for_suspend:arm64
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+
+    - name: test
+      run: |
+        docker run --rm --platform linux/amd64 signal_for_suspend:amd64
+        docker run --rm --platform linux/arm64 signal_for_suspend:arm64
